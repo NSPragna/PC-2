@@ -1,0 +1,103 @@
+#include<stdio.h>
+#include<mpi.h>
+
+int main()
+{
+        int a_r = 0, a_c = 0, v_s = 0, i = 0, rank = 0, size = 0;
+        int local_row = 0, partial_sum = 0, sum = 0, j = 0;
+        int my_first_ele = 0, my_last_ele = 0;
+        int a[10][10], v[10], partial_mul[10] = {0}, mul[10] = {0};
+
+        MPI_Init(NULL, NULL);
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+        if(rank == 0)
+        {
+                printf("Enter the row of array A: ");
+                scanf("%d", &a_r);
+                printf("Enter the column of array A: ");
+                scanf("%d", &a_c);
+                printf("Enter the array A: ");
+
+                for(i = 0; i < a_r; i++)
+                {
+                        for(j = 0; j < a_c; j++)
+                                scanf("%d", &a[i][j]);
+                }
+
+                printf("Enter the size of vector array: ");
+                scanf("%d", &v_s);
+                printf("Enter the vector array: ");
+                for(i = 0; i < v_s; i++)
+                {
+                        scanf("%d", &v[i]);
+                }
+
+                MPI_Bcast(&a_r, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(&a_c, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(&v_s, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(a, a_r*a_c, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(v, v_s, MPI_INT, 0, MPI_COMM_WORLD);
+
+                local_row = a_r / size;
+                my_first_ele = rank * local_row;
+                my_last_ele = (rank+1) * local_row;
+
+                if(a_c == v_s)
+                {      
+                        for(i = my_first_ele; i < my_last_ele; i++)
+                        {
+                                for(j = 0; j < a_c; j++)
+                                {
+                                        partial_mul[i] = partial_mul[i] + (a[i][j]*v[j]);
+                                }
+                        }
+                        printf("\nPartial multiplication in Rank 0: \n");
+                        for(i = my_first_ele; i < my_last_ele; i++)
+                                printf("%d \n", partial_mul[i]);
+
+                        MPI_Gather(partial_mul, local_row, MPI_INT, mul, local_row, MPI_INT, 0, MPI_COMM_WORLD);
+
+                        printf("\n \nGlobal Multiplication: \n");
+                        for(i = 0; i < a_r; i++)
+                        {
+                                printf("%d \n", mul[i]);
+                        }
+                }
+                else
+                        printf("\nCan't multiply. \n");
+        }
+
+        else
+        {
+                MPI_Bcast(&a_r, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(&a_c, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(&v_s, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(a, a_r*a_c, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(v, v_s, MPI_INT, 0, MPI_COMM_WORLD);
+
+                local_row = a_r / size;
+                my_first_ele = rank * local_row;
+                my_last_ele = (rank+1) * local_row;
+                if(a_c == v_s)
+                {     
+                        for(i = my_first_ele; i < my_last_ele; i++)
+                        {
+                                for(j = 0; j < a_c; j++)
+                                {
+                                        partial_mul[i] = partial_mul[i] + (a[i][j]*v[j]);
+                                }
+                        }
+                        printf("\nPartial multiplication in Rank %d: \n", rank);
+                        for(i = my_first_ele; i < my_last_ele; i++)
+                                printf("%d \n", partial_mul[i]);
+
+                        MPI_Gather(&partial_mul[my_first_ele], local_row, MPI_INT, mul, local_row, MPI_INT, 0, MPI_COMM_WORLD);
+
+                }
+                else
+                        printf("\nCan't multiply. \n");
+        }
+        MPI_FINALIZE();
+}
